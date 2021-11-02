@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include "parser.h"
-//#include "LexicalAnalyzer.cpp"
+
 
 // Example string being used to parse through tree
 std::string test = "function convert1x (fahr integer) { return fahr; } # integer a; a=5; # $";
