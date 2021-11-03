@@ -1,17 +1,14 @@
-function convert1x (fahr integer, x real)  
-integer b; 
+function convert1x (fahr integer)
 {
-b=5;
-return x;
+           return 5 * (fahr -32) / 9;
 }
-# 
-integer c;
-boolean a;
-a = true;
-if (a == true)  
-return a;
-else
-c=c+5;
-endif
-# 
-$
+#
+     integer    low,  high, step;      /* declarations */
+     get (low, high, step);
+     while (low  <=  high )  
+         {  put (low);
+             put (convert1x (low));
+             low =  low  +  step;
+         } 
+ #
+ $

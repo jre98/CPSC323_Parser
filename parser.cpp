@@ -32,13 +32,13 @@ void RAT21F() {
   // After the function definitions comes the "main" function, which is required
   // to be enclosed by # CODE #
   // Match the # symbol and update vars
-  match(curr_lexeme, "#", curr_token, "RAT21F");
+  match(curr_lexeme, "#", curr_token, "RAT21F1");
   is_past_func_defs = true;
   // Call next productions
   Opt_Declaration_List();
   Statement_List();
   // Match end of "main" function marker
-  match(curr_lexeme, "#", curr_token, "RAT21F");
+  match(curr_lexeme, "#", curr_token, "RAT21F2");
   // If we get to the final token and it is the end of string marker, we know
   // that the parsing was successful, given there were no other errors along the
   // way
@@ -266,7 +266,7 @@ void Statement_List_P() {
 void Statement() {
   // Compound production begins with terminal symbol {
   if (curr_lexeme == "{") {
-    // Compound();
+    Compound();
   }
   // Assign production begins with an identifier
   else if (curr_token == "identifier") {
@@ -281,15 +281,15 @@ void Statement() {
   }
   // Print statements begin with a terminal put
   else if (curr_lexeme == "put") {
-    // Print();
+     Print();
   }
   // Scan statements start with a terminal get
   else if (curr_lexeme == "get") {
-    // Scan();
+     Scan();
   }
   // While statements begin with a terminal while
   else if (curr_lexeme == "while") {
-    // While();
+     While();
   }
   else {
     // std::cout << curr_lexeme << std::endl;
@@ -304,6 +304,7 @@ void Statement() {
 void Compound() {
   match(curr_lexeme, "{", curr_token, "Compound");
   Statement_List();
+  match(curr_lexeme, "}", curr_token, "Compound");
 }
 
 void Assign() {
@@ -360,28 +361,28 @@ void Return_P() {
 
 //TODO
 void Print() {
-  match(curr_token, "put", curr_token, "Print1");
-  match(curr_token, "(", curr_token, "Print2");
+  match(curr_lexeme, "put", curr_token, "Print1");
+  match(curr_lexeme, "(", curr_token, "Print2");
   Expression();
-  match(curr_token, ")", curr_token, "Print3");
-  match(curr_token, ";", curr_token, "Print4");
+  match(curr_lexeme, ")", curr_token, "Print3");
+  match(curr_lexeme, ";", curr_token, "Print4");
 }
 
 //TODO
 void Scan() {
-  match(curr_token, "get", curr_token, "Scan1");
-  match(curr_token, "(", curr_token, "Scan2");
+  match(curr_lexeme, "get", curr_token, "Scan1");
+  match(curr_lexeme, "(", curr_token, "Scan2");
   IDs();
-  match(curr_token, ")", curr_token, "Scan3");
-  match(curr_token, ";", curr_token, "Scan4");
+  match(curr_lexeme, ")", curr_token, "Scan3");
+  match(curr_lexeme, ";", curr_token, "Scan4");
 }
 
 //TODO
 void While() {
-  match(curr_token, "while", curr_token, "While1");
-  match(curr_token, "(", curr_token, "While2");
+  match(curr_lexeme, "while", curr_token, "While1");
+  match(curr_lexeme, "(", curr_token, "While2");
   Condition();
-  match(curr_token, ")", curr_token, "While3");
+  match(curr_lexeme, ")", curr_token, "While3");
   Statement();
 }
 
@@ -450,10 +451,12 @@ void Term_P() {
   // If statements based on revised grammar
   if (curr_lexeme == "*") {
     match(curr_lexeme, "*", curr_token, "Term_P");
+    Factor();
     Term_P();
   }
   else if (curr_lexeme == "/") {
     match(curr_lexeme, "/", curr_token, "Term_P");
+    Factor();
     Term_P();
   }
   // If we have neither * nor / as the lexeme, just return and keep going
