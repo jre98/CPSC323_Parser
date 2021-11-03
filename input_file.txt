@@ -1,19 +1,17 @@
-
-$#
-
-#   #
-function  ()  ,
-
-integer     boolean     real REAL       q2345_t
-{  } ;;
-if  else endif   000.0000  a_2__3x   
-return put get while 
- ==      !=     >     | <   <=  =>        * / +-+
-true    false            
-True             WHILE 1234
-   comment1
-   comment2
-   3
-    
-a1234   asd23_
-$%  .123   123.
+function convert1x (fahr integer, x real)  
+integer b; 
+{
+b=5;
+return x;
+}
+# 
+integer c;
+boolean a;
+a = true;
+if (a == true)  
+return a;
+else
+c=c+5;
+endif
+# 
+$
