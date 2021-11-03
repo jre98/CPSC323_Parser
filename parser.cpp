@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include "parser.h"
+#include "Lexer.cpp"
 
 
 // Example string being used to parse through tree
@@ -9,10 +10,16 @@ std::string test = "function convert1x (fahr integer) { return fahr; } # integer
 // production or not
 bool print_switch = false;
 
+// The only way I could figure out how to get Opt_Function_Defs to pick the
+// correct path
+bool is_past_func_defs = false;
+
+vector<vector<string>> lexemes = Lexer();
+
 // String to hold the current lexeme that we are dealing with
-std::string curr_lexeme = "function";
+std::string curr_lexeme = lexemes[0][0];
 // String to hold the current token we are dealing with
-std::string curr_token = "identifier";
+std::string curr_token = lexemes[0][1];
 
 // Starting function to kick off recursive parser
 void RAT21F() {
@@ -20,18 +27,18 @@ void RAT21F() {
   // Initialize curr_lexeme and curr_token to whatever first token and lexeme
   // are in the source code (initialize here)
 
-  // Infinite Recursion happening down this route
   Opt_Function_Defs();
 
   // After the function definitions comes the "main" function, which is required
   // to be enclosed by # CODE #
   // Match the # symbol and update vars
-  match(curr_lexeme, "#", curr_token);
+  match(curr_lexeme, "#", curr_token, "RAT21F");
+  is_past_func_defs = true;
   // Call next productions
   Opt_Declaration_List();
   Statement_List();
   // Match end of "main" function marker
-  match(curr_lexeme, "#", curr_token);
+  match(curr_lexeme, "#", curr_token, "RAT21F");
   // If we get to the final token and it is the end of string marker, we know
   // that the parsing was successful, given there were no other errors along the
   // way
@@ -45,6 +52,7 @@ void RAT21F() {
   }
 
 }
+
 void Opt_Function_Defs() {
   // if the current lexeme is the # seperator, this means that there were no
   // function definitions in the source file. If there are no function
@@ -80,17 +88,17 @@ void Function() {
   // Function definitions come at the beginning of the RAT21F file and are all
   // declared using the keyword function. If curr_lexeme is 'function', a
   // function is being declared and we will match it and advance to next lexeme
-  match(curr_lexeme, "function", curr_token);
+  match(curr_lexeme, "function", curr_token, "Function1");
 
   // After matching the lexeme, the match function updates the global variables,
   // so we continue on and call the next function
 
   Identifier();
   // Match '('
-  match(curr_lexeme, "(", curr_token);
+  match(curr_lexeme, "(", curr_token, "Function2");
   Opt_Parameter_List();
   //  Match ')'
-  match(curr_lexeme, ")", curr_token);
+  match(curr_lexeme, ")", curr_token, "Function3");
   Opt_Declaration_List();
   Body();
   // Call Body (Body -> { <Statement List> })
@@ -119,7 +127,8 @@ void Parameter_List_P() {
   // comma to separate the parameters
   if(curr_lexeme == ",") {
     // Update variables
-    match(curr_lexeme, ",", curr_token);
+    match(curr_lexeme, ",", curr_token, "Parameter_List_P");
+    Parameter_List();
   }
   // If the next lexeme is not a comma, this means we have reached the end of
   // the parameter list, so call Empty()
@@ -136,36 +145,50 @@ void Parameter() {
 void Qualifier() {
   // A qualifier is allowed to be an int, bool or real. If the current lexeme is
   // any of these three, we will enter the if statement
-  if (curr_lexeme == "integer" || curr_lexeme == "boolean" || curr_lexeme == "real") {
-    // Use the match function to update variables and output information
-    match(curr_lexeme, curr_lexeme, curr_token);
+  // if (curr_lexeme == "integer" || curr_lexeme == "boolean" || curr_lexeme == "real") {
+  //   // Use the match function to update variables and output information
+  //   match(curr_lexeme, curr_lexeme, curr_token);
+  // }
+  if (curr_lexeme == "integer" || curr_lexeme == "real" || curr_lexeme == "boolean") {
+    match(curr_lexeme, curr_lexeme, curr_token, "Qualifier");
+  }
+  else {
+    std::cout << "Invalid Qualifier" << std::endl;
   }
 }
 
 void Body() {
   // Beginning of function body is {
-  match(curr_lexeme, "{", curr_token);
+  match(curr_lexeme, "{", curr_token, "Body");
   // Statements inside the function
   Statement_List();
   // End of function
-  match(curr_lexeme, "}", curr_token);
+  match(curr_lexeme, "}", curr_token, "Body");
 }
 
 void Opt_Declaration_List() {
   // If the current token is an identifier, we know that there will be a list of
   // declarations to handle, so we will call Declaration_List()
-  if(curr_token == "integer" || curr_token == "real" || curr_token == "boolean") {
+  // if(curr_lexeme == "integer" || curr_lexeme == "real" || curr_lexeme == "boolean") {
+  //   Declaration_List();
+  // }
+  // // Otherwise, if there are no declarations, we will continue on
+  // else {
+  //   return;
+  // }
+  if(curr_lexeme == "{" || curr_lexeme == "#") {
+    Empty();
+  }
+  else {
     Declaration_List();
   }
-  // Otherwise, if there are no declarations, we will continue on
-  else {
-    return;
-  }
+
 }
 
 void Declaration_List() {
+
   Declaration();
-  match(curr_lexeme, ";", curr_token);
+  match(curr_lexeme, ";", curr_token, "Declaration_List");
   Declaration_List_P();
 }
 
@@ -173,7 +196,7 @@ void Declaration_List_P() {
   //<Declaration List>’ ::= <Declaration List>  |  Ep
   // If the next token is a keyword, then we know that we have another
   // declaration coming, so we call Declaration_List()
-  if (curr_token == "integer" || curr_token == "real" || curr_token == "boolean") {
+  if (curr_lexeme == "integer" || curr_lexeme == "real" || curr_lexeme == "boolean") {
     Declaration_List();
   }
   // Otherwise, we return and continue on
@@ -186,14 +209,18 @@ void Declaration() {
   //<Declaration> :: = integer    |    boolean    |  real         <IDs>
   // Match the current lexeme to the correct keyword, then have variables be
   // updated by match
+  // match(curr_lexeme, curr_lexeme, curr_token, "Declaration");
   if(curr_lexeme == "integer") {
-    match(curr_lexeme, "integer", curr_token);
+    match(curr_lexeme, "integer", curr_token, "Declaration1");
   }
   else if(curr_lexeme == "boolean") {
-    match(curr_lexeme, "boolean", curr_token);
+    match(curr_lexeme, "boolean", curr_token, "Declaration2");
   }
   else if(curr_lexeme == "real") {
-    match(curr_lexeme, "real", curr_token);
+    match(curr_lexeme, "real", curr_token, "Declaration3");
+  }
+  else {
+    std::cout << "Invalid Declaration" << std::endl;
   }
 
   // After matching the keyword, call IDs
@@ -208,7 +235,8 @@ void IDs() {
 void IDs_P() {
   // If the next token is an identifier, call IDs again to make sure the next
   // identifier on the list is valid
-  if(curr_token == "identifier") {
+  if(curr_lexeme == ",") {
+    match(curr_lexeme, ",", curr_token, "IDs_P");
     IDs();
   }
   // Otherwise, call empty and move on
@@ -246,7 +274,7 @@ void Statement() {
   }
   // If statements start with a terminal if
   else if (curr_lexeme == "if") {
-    // If();
+    If();
   }
   else if (curr_lexeme == "return") {
     Return();
@@ -264,39 +292,56 @@ void Statement() {
     // While();
   }
   else {
-    std::cout << "Invalid Statement" << std::endl;
+    // std::cout << curr_lexeme << std::endl;
+    // std::cout << curr_token << std::endl;
+    // std::cout << curr_lexeme[8] << std::endl;
+    // std::cout << curr_token[8] << std::endl;
+    // std::cout << "Invalid Statement" << std::endl;
   }
 }
 
 // TODO
 void Compound() {
-
+  match(curr_lexeme, "{", curr_token, "Compound");
+  Statement_List();
 }
 
 void Assign() {
   //<Assign> ::=     <Identifier> = <Expression> ;
   Identifier();
   // Match the = for the correct assignment
-  match(curr_lexeme, "=", curr_token);
+  match(curr_lexeme, "=", curr_token, "Assign1");
   Expression();
   // Next, match the ";" that ends the assignment
-  match(curr_lexeme, ";", curr_token);
+  match(curr_lexeme, ";", curr_token, "Assign2");
 
 }
 
 //TODO
 void If() {
-
+  // std::cout << "This is the If production" << std::endl;
+  match(curr_lexeme, "if", curr_token, "If1");
+  match(curr_lexeme, "(", curr_token, "If2");
+  Condition();
+  match(curr_lexeme, ")", curr_token, "If3");
+  Statement();
+  If_P();
 }
 
-//TODO
 void If_P() {
-
+  if (curr_lexeme == "endif") {
+    match(curr_lexeme, curr_lexeme, curr_token, "If_P1");
+  }
+  else if (curr_lexeme == "else") {
+    match(curr_lexeme, curr_lexeme, curr_token, "If_P2");
+    Statement();
+    match(curr_lexeme, "endif", curr_token, "If_P3");
+  }
 }
 
 void Return() {
   // This production begins with a terminal "return"
-  match(curr_lexeme, "return", curr_token);
+  match(curr_lexeme, "return", curr_token, "Return");
   Return_P();
 }
 
@@ -309,33 +354,67 @@ void Return_P() {
   }
   else {
     Expression();
-    match(curr_lexeme, ";", curr_token);
+    match(curr_lexeme, ";", curr_token, "Return_P");
   }
 }
 
 //TODO
 void Print() {
-
+  match(curr_token, "put", curr_token, "Print1");
+  match(curr_token, "(", curr_token, "Print2");
+  Expression();
+  match(curr_token, ")", curr_token, "Print3");
+  match(curr_token, ";", curr_token, "Print4");
 }
 
 //TODO
 void Scan() {
-
+  match(curr_token, "get", curr_token, "Scan1");
+  match(curr_token, "(", curr_token, "Scan2");
+  IDs();
+  match(curr_token, ")", curr_token, "Scan3");
+  match(curr_token, ";", curr_token, "Scan4");
 }
 
 //TODO
 void While() {
-
+  match(curr_token, "while", curr_token, "While1");
+  match(curr_token, "(", curr_token, "While2");
+  Condition();
+  match(curr_token, ")", curr_token, "While3");
+  Statement();
 }
 
 //TODO
 void Condition() {
-
+  Expression();
+  Relop();
+  Expression();
 }
 
 //TODO
 void Relop() {
-
+  if(curr_lexeme ==  "==") {
+    match(curr_lexeme, curr_lexeme, curr_token, "Relop1");
+  }
+  else if(curr_lexeme == "!=") {
+    match(curr_lexeme, curr_lexeme, curr_token, "Relop2");
+  }
+  else if(curr_lexeme == ">") {
+    match(curr_lexeme, curr_lexeme, curr_token, "Relop3");
+  }
+  else if(curr_lexeme == "<") {
+    match(curr_lexeme, curr_lexeme, curr_token, "Relop4");
+  }
+  else if(curr_lexeme == "<=") {
+    match(curr_lexeme, curr_lexeme, curr_token, "Relop5");
+  }
+  else if(curr_lexeme == "=>") {
+    match(curr_lexeme, curr_lexeme, curr_token, "Relop6");
+  }
+  else {
+    std::cout << "Invalid real operator" << std::endl;
+  }
 }
 
 
@@ -347,11 +426,13 @@ void Expression() {
 void Expression_P() {
   // If statements based on revised grammar
   if (curr_lexeme == "+") {
-    match(curr_lexeme, "+", curr_token);
+    match(curr_lexeme, "+", curr_token, "Expression_P1");
+    Term();
     Expression_P();
   }
   else if (curr_lexeme == "-") {
-    match(curr_lexeme, "-", curr_token);
+    match(curr_lexeme, "-", curr_token, "Expression_P");
+    Term();
     Expression_P();
   }
   // If we have neither + nor - as the lexeme, we just return
@@ -368,11 +449,11 @@ void Term() {
 void Term_P() {
   // If statements based on revised grammar
   if (curr_lexeme == "*") {
-    match(curr_lexeme, "*", curr_token);
+    match(curr_lexeme, "*", curr_token, "Term_P");
     Term_P();
   }
   else if (curr_lexeme == "/") {
-    match(curr_lexeme, "/", curr_token);
+    match(curr_lexeme, "/", curr_token, "Term_P");
     Term_P();
   }
   // If we have neither * nor / as the lexeme, just return and keep going
@@ -385,7 +466,7 @@ void Factor() {
   // <Factor> ::=      -  <Primary>    |    <Primary>
   // Case where we have a terminal -
   if (curr_lexeme == "-") {
-    match(curr_lexeme, "-", curr_token);
+    match(curr_lexeme, "-", curr_token, "Factor");
     Primary();
   }
   // Case where we do not have terminal -
@@ -404,24 +485,33 @@ void Primary() {
 
   // Lots of if statements to determind where the current lexeme falls in terms
   // of which production should be called next
-  if (curr_token == "identifier") {
+  // std::cout << "The lexeme is: "<< lexemes[1][0] << std::endl;
+  if (curr_token == "identifier" && lexemes[1][0] == "(") {
+    std::cout << "Statement has been reached" << std::endl;
+    Identifier();
+    match(curr_lexeme, "(", curr_token, "Primary1");
+    IDs();
+    match(curr_lexeme, ")", curr_token, "Primary2");
+  }
+  else if (curr_token == "identifier") {
+
     Identifier();
   }
   else if (curr_token == "integer") {
     // Not defined yet
-    // Integer();
+    Integer();
   }
   else if (curr_token == "real") {
     // Real is not yet defined
-    // Real();
+    Real();
   }
   else if (curr_lexeme == "(") {
-    // match(curr_lexeme, "(", curr_token);
-    // Expression();
-    // match(curr_lexeme, ")", curr_token);
+    match(curr_lexeme, "(", curr_token, "Primary3");
+    Expression();
+    match(curr_lexeme, ")", curr_token, "Primary4");
   }
   else if (curr_lexeme == "true" || curr_lexeme == "false") {
-    return;
+    match(curr_lexeme, curr_lexeme, curr_token, "Primary5");
   }
 }
 
@@ -435,6 +525,7 @@ void Identifier() {
   // not error, as this would indicate that we have an incorrect lexeme
   if(curr_token == "identifier") {
     // std::cout << "Token: " << curr_token << "          Lexeme: " << curr_lexeme << std::endl;
+    match(curr_lexeme, curr_lexeme, curr_token, "Identifier");
     // Update curr_token and curr_lexeme
   }
   else {
@@ -448,24 +539,44 @@ void Integer() {
   if(curr_token == "integer") {
     // std::cout << "Token: " << curr_token << "          Lexeme: " << curr_lexeme << std::endl;
     // Update lexeme and token here
+    match(curr_lexeme, curr_lexeme, curr_token, "Integer");
   }
   else {
     std::cout << "Invalid integer value" << std::endl;
   }
 }
 
+void Real() {
+  if (curr_token == "real") {
+    match(curr_lexeme, curr_lexeme, curr_token, "Real");
+  }
+  else {
+    std::cout << "Invalid integer value" << std::endl;
+  }
+}
+
+
 // Match function is for matching terminal symbols and making sure they are correct
 // std::string token is a parameter because if we match, we want to print out
 // the info about the lexeme, including its token type
-void match(std::string curr_lexeme, std::string corrrect_lexeme, std::string token) {
+void match(std::string& curr_lexeme, std::string corrrect_lexeme, std::string& token, std::string curr_prod) {
   // If the lexeme is correct, display its information and token type
   if(curr_lexeme == corrrect_lexeme) {
-    // std::cout << "Token: " << curr_token << "          Lexeme: " << curr_lexeme << std::endl;
+    std::cout << "Token: " << curr_token << "          Lexeme: " << curr_lexeme << std::endl;
     // After printing info about the lexeme, update the global variables that
     // store the current token and the current lexeme
+
+    // Erase the first row of entries from the lexemes vector
+    lexemes.erase(lexemes.begin());
+    // Since the next lexeme and token are now at the beginning of the list, we
+    // simply reassign curr_token and curr_lexeme to the beginning of the vector
+    curr_lexeme = lexemes[0][0];
+    curr_token = lexemes[0][1];
   }
   // Otherwise, display an error message of some sort
   else {
-    std::cout << "Error Message" << std::endl;
+    std::cout << "Error Message generated by production " << curr_prod << std::endl;
   }
 }
+
+// Function to determine if there is a statement upcoming (for use in Opt_Declaration_List)

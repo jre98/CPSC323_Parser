@@ -9,10 +9,8 @@ void Function_Defs();
 void Function_Defs_P();
 void Function();
 void Opt_Parameter_List();
-//Unsure on these two
 void Parameter_List();
 void Parameter_List_P();
-//End unsureness
 void Parameter();
 void Qualifier();
 void Body();
@@ -29,6 +27,7 @@ void Compound();
 void Assign();
 void If();
 void If_P();
+void If_P_P();
 void Return();
 void Return_P();
 void Print();
@@ -44,7 +43,9 @@ void Factor();
 void Primary();
 void Empty();
 void Identifier();
+void Integer();
+void Real();
 
-void match(std::string lexeme, std::string corrrect_lexeme, std::string token);
+void match(std::string& lexeme, std::string corrrect_lexeme, std::string& token, std::string curr_prod);
 
 #endif
