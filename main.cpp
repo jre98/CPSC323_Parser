@@ -12,13 +12,13 @@ using namespace std;
 int main() {
 
 //Token_list will be all the lexed tokens. {Token, Lexeme}
-  // vector<vector<string>> token_list = Lexer();
+  vector<vector<string>> token_list = Lexer();
 
-  // std::cout << "This is the list of all lexemes and the corresponding token types"
-  //           << std::endl;
-  // for (int i = 0; i < token_list.size(); i++) {
-  //   cout << i << " " << token_list[i][0] << " " << token_list[i][1] << "\n";
-  // }
+  std::cout << "This is the list of all lexemes and the corresponding token types"
+            << std::endl;
+  for (int i = 0; i < token_list.size(); i++) {
+    cout << i << " " << token_list[i][0] << " " << token_list[i][1] << "\n";
+  }
 
 
 

@@ -46,6 +46,8 @@ void Identifier();
 void Integer();
 void Real();
 
-void match(std::string& lexeme, std::string corrrect_lexeme, std::string& token, std::string curr_prod);
+void match(std::string& lexeme, std::string corrrect_lexeme, std::string& token, std::string info);
+void update(std::string& lexeme, std::string& token);
+void error_info(std::string line_num, std::string info);
 
 #endif

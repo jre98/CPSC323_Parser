@@ -4,16 +4,21 @@
 #include "Lexer.cpp"
 
 
-// Example string being used to parse through tree
-std::string test = "function convert1x (fahr integer) { return fahr; } # integer a; a=5; # $";
 // A  bool that can be changed depending on if we want to print out the current
 // production or not
 bool print_switch = false;
+
+// Vector to hold errors that the parser encounters
+// vector<vector<string>> errors;
+
+// Integer to keep track of the number of errors we encounter
+int num_of_errors = 0;
 
 // The only way I could figure out how to get Opt_Function_Defs to pick the
 // correct path
 bool is_past_func_defs = false;
 
+// 2d vector containing lexed source code with the lexeme and token type
 vector<vector<string>> lexemes = Lexer();
 
 // String to hold the current lexeme that we are dealing with
@@ -23,46 +28,52 @@ std::string curr_token = lexemes[0][1];
 
 // Starting function to kick off recursive parser
 void RAT21F() {
-
-  // Initialize curr_lexeme and curr_token to whatever first token and lexeme
-  // are in the source code (initialize here)
-
   Opt_Function_Defs();
 
   // After the function definitions comes the "main" function, which is required
   // to be enclosed by # CODE #
   // Match the # symbol and update vars
-  match(curr_lexeme, "#", curr_token, "RAT21F1");
+  match(curr_lexeme, "#", curr_token, "separator");
   is_past_func_defs = true;
   // Call next productions
   Opt_Declaration_List();
   Statement_List();
   // Match end of "main" function marker
-  match(curr_lexeme, "#", curr_token, "RAT21F2");
-  // If we get to the final token and it is the end of string marker, we know
-  // that the parsing was successful, given there were no other errors along the
-  // way
-  if (curr_lexeme == "$") {
+  match(curr_lexeme, "#", curr_token, "separator");
+  // If we get to the final token and it is the end of string marker ($), we
+  // know that the parsing was successful, given there were no other errors
+  // along the way
+  if (curr_lexeme == "$" && num_of_errors == 0) {
     std::cout << "This parser has reached the end of the file, parsing was "
                  " successful." << std::endl;
   }
   // Otherwise, there was some issue with parsing the file
   else {
-    std::cout << "There was an error while parsing the file" << std::endl;
+    std::cout << "There were a error(s) while parsing the file." <<
+                  num_of_errors <<  "errors were generated. Error(s) listed"
+                  "above." << std::endl;
   }
 
 }
 
+// Check this for error handling
 void Opt_Function_Defs() {
   // if the current lexeme is the # seperator, this means that there were no
   // function definitions in the source file. If there are no function
   // definitions, we call Empty(). If there are, we call Function_Defs()
-  if(curr_lexeme != "#") {
+  if (curr_lexeme == "#") {
+    Empty();
+  }
+  else if (curr_lexeme == "function") {
     Function_Defs();
   }
   else {
-    Empty();
+    std::cout << "Error on line ZZZ, expected function definitions or beginning "
+                 "of the main function." << std::endl;
+    // update(curr_lexeme, curr_token);
+    Function_Defs();
   }
+
 }
 
 void Function_Defs() {
@@ -79,8 +90,23 @@ void Function_Defs_P() {
   }
   // Otherwise, there are still more functions being declared, so we will loop
   // back to Function_Defs()
-  else {
+  else if (curr_lexeme == "function") {
     Function_Defs();
+  }
+  else {
+    std::cout << "Error generated, expected another function definition or "
+                 "beginning of main function." << std::endl;
+
+    // In the case that the next lexeme is a separator, we assume the user is
+    // trying to advance to the main function, so we will return back to
+    // Opt_Function_Defs
+    if(curr_token == "separator" || curr_token == "Error") {
+      return;
+    }
+    // Otherwise, we assume the user wanted to define another function
+    else {
+      Function_Defs();
+    }
   }
 }
 
@@ -88,17 +114,21 @@ void Function() {
   // Function definitions come at the beginning of the RAT21F file and are all
   // declared using the keyword function. If curr_lexeme is 'function', a
   // function is being declared and we will match it and advance to next lexeme
-  match(curr_lexeme, "function", curr_token, "Function1");
+  if (curr_lexeme == "function") {
+    match(curr_lexeme, "function", curr_token, "function definition");
+  }
+  else {
+    error_info("0", "function definition");
+  }
 
   // After matching the lexeme, the match function updates the global variables,
   // so we continue on and call the next function
-
   Identifier();
   // Match '('
-  match(curr_lexeme, "(", curr_token, "Function2");
+  match(curr_lexeme, "(", curr_token, "separator");
   Opt_Parameter_List();
   //  Match ')'
-  match(curr_lexeme, ")", curr_token, "Function3");
+  match(curr_lexeme, ")", curr_token, "separator");
   Opt_Declaration_List();
   Body();
   // Call Body (Body -> { <Statement List> })
@@ -164,23 +194,18 @@ void Body() {
   Statement_List();
   // End of function
   match(curr_lexeme, "}", curr_token, "Body");
+  std::cout << "Curr lexeme is: " << curr_lexeme << " and curr token is: " << curr_token << std::endl;
 }
 
 void Opt_Declaration_List() {
   // If the current token is an identifier, we know that there will be a list of
   // declarations to handle, so we will call Declaration_List()
-  // if(curr_lexeme == "integer" || curr_lexeme == "real" || curr_lexeme == "boolean") {
-  //   Declaration_List();
-  // }
-  // // Otherwise, if there are no declarations, we will continue on
-  // else {
-  //   return;
-  // }
-  if(curr_lexeme == "{" || curr_lexeme == "#") {
-    Empty();
-  }
-  else {
+  if(curr_lexeme == "integer" || curr_lexeme == "real" || curr_lexeme == "boolean") {
     Declaration_List();
+  }
+  // Otherwise, we know that we need to call empty, as there will be no list
+  else {
+    Empty();
   }
 
 }
@@ -311,10 +336,10 @@ void Assign() {
   //<Assign> ::=     <Identifier> = <Expression> ;
   Identifier();
   // Match the = for the correct assignment
-  match(curr_lexeme, "=", curr_token, "Assign1");
+  match(curr_lexeme, "=", curr_token, "assignment operator");
   Expression();
   // Next, match the ";" that ends the assignment
-  match(curr_lexeme, ";", curr_token, "Assign2");
+  match(curr_lexeme, ";", curr_token, "separator");
 
 }
 
@@ -414,7 +439,10 @@ void Relop() {
     match(curr_lexeme, curr_lexeme, curr_token, "Relop6");
   }
   else {
-    std::cout << "Invalid real operator" << std::endl;
+    error_info("0", "real operator");
+    update(curr_lexeme, curr_token);
+    // Display an error message (add line number later)
+
   }
 }
 
@@ -490,7 +518,6 @@ void Primary() {
   // of which production should be called next
   // std::cout << "The lexeme is: "<< lexemes[1][0] << std::endl;
   if (curr_token == "identifier" && lexemes[1][0] == "(") {
-    std::cout << "Statement has been reached" << std::endl;
     Identifier();
     match(curr_lexeme, "(", curr_token, "Primary1");
     IDs();
@@ -562,24 +589,36 @@ void Real() {
 // Match function is for matching terminal symbols and making sure they are correct
 // std::string token is a parameter because if we match, we want to print out
 // the info about the lexeme, including its token type
-void match(std::string& curr_lexeme, std::string corrrect_lexeme, std::string& token, std::string curr_prod) {
+void match(std::string& curr_lexeme, std::string corrrect_lexeme, std::string& token, std::string info) {
   // If the lexeme is correct, display its information and token type
+  // std::cout << "Token: " << curr_token << "          Lexeme: " << curr_lexeme << std::endl;
   if(curr_lexeme == corrrect_lexeme) {
     std::cout << "Token: " << curr_token << "          Lexeme: " << curr_lexeme << std::endl;
-    // After printing info about the lexeme, update the global variables that
-    // store the current token and the current lexeme
-
-    // Erase the first row of entries from the lexemes vector
-    lexemes.erase(lexemes.begin());
-    // Since the next lexeme and token are now at the beginning of the list, we
-    // simply reassign curr_token and curr_lexeme to the beginning of the vector
-    curr_lexeme = lexemes[0][0];
-    curr_token = lexemes[0][1];
+    update(curr_lexeme, token);
   }
   // Otherwise, display an error message of some sort
   else {
-    std::cout << "Error Message generated by production " << curr_prod << std::endl;
+    // std::cout << "Error Message generated by production " << curr_prod << std::endl;
+    error_info("0", info);
   }
 }
 
-// Function to determine if there is a statement upcoming (for use in Opt_Declaration_List)
+// Separate update function to make things easier in error handling
+void update(std::string& lexeme, std::string& token) {
+  // Erase the first row of entries from the lexemes vector
+  lexemes.erase(lexemes.begin());
+  // Since the next lexeme and token are now at the beginning of the list, we
+  // simply reassign curr_token and curr_lexeme to the beginning of the vector
+  lexeme = lexemes[0][0];
+  token = lexemes[0][1];
+}
+
+void error_info(std::string line_num, std::string info) {
+
+  // Print info about the error and increment number of errors found
+  std::cout << "Error on line " << line_num << ". " << curr_lexeme << " is an "
+               "invalid " << info << std::endl;
+  num_of_errors++;
+  // Still want to update variables so we can keep parsing
+  update(curr_lexeme, curr_token);
+}
