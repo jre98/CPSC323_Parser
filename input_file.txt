@@ -10,7 +10,7 @@ function studentID(x integer, b real)
     return x + 1000 * (23);
 }
 !
-integer a
+integer a;
 real b;
 get (low, high, step);     
 while (low  ==  high )
