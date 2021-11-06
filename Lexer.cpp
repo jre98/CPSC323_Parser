@@ -11,6 +11,7 @@ bool is_keyword(string lexeme);
 bool is_operator(string lexeme);
 bool is_seperator(string lexeme);
 bool is_identifier(string lexeme);
+vector<string> Lexeme_Token_LineNum(string token, string lexeme, int line_num);
 vector<vector<string>> Lexer();
 
 vector<vector<string>> Lexer() {
@@ -57,15 +58,32 @@ vector<vector<string>> Lexer() {
 
     //Saves the input file as a queue of chars to be used by the FSM
     queue<char> input_queue;
+    queue<int> line_number_q;
+   
+   //Keeps track of the line number of each char; attaches the chars line num in return vector
+    int line_number = 0;
+
     vector<vector<string>> token_list;
     vector<string> token_pairs;
     char space = ' ';
 
+    //This is because of how the fsm is setup; needs an extra one for 
+    //An off by one error
+    line_number_q.push(0);
+    line_number_q.push(0);
+
+
     while (input_file >> noskipws >> ch) {
         input_queue.push(ch);
-    }
-    input_queue.push(space);
 
+        if (ch == '\n') {
+            line_number++;
+        }
+        line_number_q.push(line_number);
+    }
+
+    input_queue.push(space);
+    
 
     //Variables needed in the FSM
     string current_token;
@@ -117,6 +135,7 @@ vector<vector<string>> Lexer() {
         current_ch = input_queue.front();
         current_token.push_back(input_queue.front());
         input_queue.pop(); 
+        line_number_q.pop();
         }
         skip_one = 0;
         
@@ -125,10 +144,7 @@ vector<vector<string>> Lexer() {
         //First accepting state is just a seperator as the token
         if (is_seperator(current_ch) && current_token.length() == 1 && alpha_state == 0 && num_state == 0 && op_state == 0 && comment_state == 0) {
             //Accepting state for seperators
-            token_pairs.clear();
-            token_pairs.push_back(current_token);
-            token_pairs.push_back("seperator");
-            token_list.push_back(token_pairs);
+            token_list.push_back(Lexeme_Token_LineNum(current_token,"seperator",line_number_q.front()));
 
             current_token = "";
             accepted = 1;
@@ -149,17 +165,11 @@ vector<vector<string>> Lexer() {
                 //If this token is not a keyword, then it must be an identifier
                 if (is_keyword(current_token.substr(0, current_token.size()-1))) {
                     //Accepting keyword state
-                token_pairs.clear();
-                token_pairs.push_back(current_token.substr(0, current_token.size()-1));
-                token_pairs.push_back("keyword");
-                token_list.push_back(token_pairs);
+                    token_list.push_back(Lexeme_Token_LineNum(current_token.substr(0, current_token.size()-1),"keyword",line_number_q.front()));
                 }
                 else {
                     //Accepting identifier state
-                    token_pairs.clear();
-                token_pairs.push_back(current_token.substr(0, current_token.size()-1));
-                token_pairs.push_back("identifier");
-                token_list.push_back(token_pairs);
+                token_list.push_back(Lexeme_Token_LineNum(current_token.substr(0, current_token.size()-1),"identifier",line_number_q.front()));
                 }
                 current_token = current_ch;
                 accepted = 1;
@@ -185,25 +195,16 @@ vector<vector<string>> Lexer() {
                 }
                 if(decimal_count == 1 && current_token[0] != '.') {
                     //If token contains "." then it is real
-                    token_pairs.clear();
-                token_pairs.push_back(current_token.substr(0, current_token.size()-1));
-                token_pairs.push_back("real");
-                token_list.push_back(token_pairs);
+                token_list.push_back(Lexeme_Token_LineNum(current_token.substr(0, current_token.size()-1),"real",line_number_q.front()));               
                 }
 
                 else if (decimal_count == 0){
                     //If token does not contain ".", it is integer
-                    token_pairs.clear();
-                token_pairs.push_back(current_token.substr(0, current_token.size()-1));
-                token_pairs.push_back("integer");
-                token_list.push_back(token_pairs);
+                token_list.push_back(Lexeme_Token_LineNum(current_token.substr(0, current_token.size()-1),"integer",line_number_q.front()));     
                 }
                 else {
                     //If token has more than one decimal or begins with a decimal it is an error
-                    token_pairs.clear();
-                token_pairs.push_back(current_token.substr(0, current_token.size()-1));
-                token_pairs.push_back("error");
-                token_list.push_back(token_pairs);
+                    token_list.push_back(Lexeme_Token_LineNum(current_token.substr(0, current_token.size()-1),"Error",line_number_q.front()));   
                 }
                 current_token = current_ch;
                 accepted = 1;
@@ -233,10 +234,8 @@ vector<vector<string>> Lexer() {
                     op_state = 0;
                 }
                 else if (is_operator(current_token.substr(0, current_token.size()-1))) {
-                token_pairs.clear();
-                token_pairs.push_back(current_token.substr(0, current_token.size()-1));
-                token_pairs.push_back("operator");
-                token_list.push_back(token_pairs);
+
+                token_list.push_back(Lexeme_Token_LineNum(current_token.substr(0, current_token.size()-1),"Operator",line_number_q.front()));
                 }
                 /*
                 else if (current_token.length() == 2) {
@@ -254,10 +253,8 @@ vector<vector<string>> Lexer() {
                 }*/
                 else {
                     //This is if the operator is invalid
-                token_pairs.clear();
-                token_pairs.push_back(current_token.substr(0, current_token.size()-1));
-                token_pairs.push_back("Error");
-                token_list.push_back(token_pairs);
+
+                token_list.push_back(Lexeme_Token_LineNum(current_token.substr(0, current_token.size()-1),"Error",line_number_q.front()));
     
                 }
 
@@ -277,6 +274,7 @@ vector<vector<string>> Lexer() {
          }
       
     }
+
     return(token_list);
 }
 
@@ -316,4 +314,13 @@ bool is_seperator(string lexeme) {
             }
     }
     return 0;
+}
+
+vector<string> Lexeme_Token_LineNum(string token, string lexeme, int line_num) {
+                vector<string> final_token;
+                //final_token.clear();
+                final_token.push_back(token);
+                final_token.push_back(lexeme);
+                final_token.push_back(to_string(line_num+1));
+                return final_token;
 }
