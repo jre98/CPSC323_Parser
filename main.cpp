@@ -8,20 +8,16 @@
 
 using namespace std;
 
-
+/*
+This is the driver function for the parser
+*/
 int main() {
-
-//Token_list will be all the lexed tokens. {Token, Lexeme}
-  vector<vector<string>> token_list = Lexer();
-
-  std::cout << "This is the list of all lexemes and the corresponding token types"
-            << std::endl;
-  for (int i = 0; i < token_list.size(); i++) {
-    cout << i << " " << token_list[i][0] << " " << token_list[i][1] << "\n";
-  }
-
-
-
+  // This main function calls the RAT21F() function that is included from
+  // parser.cpp. Once this function is called, the parser will parse the lexed
+  // code until one of the following happens: the parser reaches the end of the
+  // file and finds the $ symbol (indicating a successful parsing of the file),
+  // or, the parser encounters an error while parsing, in which case, the
+  // program will exit and display an error message
 
   // Idea is to call the RAT21F function (with $ appended at end) with the input
   // parameter being a string containing the entire source codes

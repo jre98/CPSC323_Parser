@@ -3,6 +3,8 @@
 
 // This .h file holds all of the function prototypes so that the program will
 // not give a undeclared function error
+
+// All function prototypes for productions
 void RAT21F();
 void Opt_Function_Defs();
 void Function_Defs();
@@ -46,8 +48,9 @@ void Identifier();
 void Integer();
 void Real();
 
-void match(std::string& lexeme, std::string corrrect_lexeme, std::string& token, std::string info);
+// Function prototypes for other useful functions
+void match(std::string& lexeme, std::string corrrect_lexeme, std::string& token);
 void update(std::string& lexeme, std::string& token);
-void error_info(std::string line_num, std::string info);
+void error_info();
 
 #endif
