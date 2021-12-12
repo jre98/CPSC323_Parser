@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include <stack>
 #include "parser.h"
 #include "Lexer.cpp"
 
@@ -33,30 +32,30 @@ std::string curr_lexeme = lexemes[0][0];
 std::string curr_token = lexemes[0][1];
 // The line number of each lexeme is stored in lexemes[0][2]
 
-//String to hold current token into a temp variable
-std::string save = curr_token;
-
 //Global Variable instru_address, increments in function gen_instr so that Address when printing instruct_table increments
 int instru_address = 1;
 
+// Temp variable to hold the type of identifier
+std::string temp_idtype;
+
+//String to hold current token into a temp variable
+std::string save = curr_token;
+
 //Creating instruction table array
-string Instruct_Table[1000][3] = { {"Address", "Op", "Oprnd"}};
+string instruct_table[1000][3] = { {"Address", "Op", "Oprnd"} };
 
 
-//Generates the assembly code, grabbing the memory address, op, and oprnd
-void gen_instr(std::string op, string oprnd){
-  int instr_address;
-  Instruct_Table[instru_address][0] = instr_address;
-  Instruct_Table[instru_address][1] = op;
-  Instruct_Table[instru_address][2] = oprnd;
+//Generates the assembly code, grabbing the instruction address, op, and oprnd
+void gen_instr(std::string op, std::string oprnd){
+  instruct_table[instru_address][0] = instru_address;
+  instruct_table[instru_address][1] = op;
+  instruct_table[instru_address][2] = oprnd;
   instru_address++;
-  mem_addr++;
 }
+string get_address(std::string save){
+  return instruct_table[instru_address][0];
 
-//Grabs the address of the current token when token == identifier
-// void get_address(std::string save){
-//     if()
-// }
+}
 // Starting function to kick off recursive parser
 void RAT21F() {
   // Open the output file, which is where the info about parsing the code will be
@@ -88,6 +87,7 @@ void RAT21F() {
     output_file << setw(10) << left << "This parser has reached the end of the "
     "file, parsing was successful." << std::endl;
     print_symbol_table();
+    print_instruct_table();
   }
   // If there is no "$" at the end of the file, display a custom error message
   else {
@@ -404,14 +404,12 @@ void Assign() {
   // Find if there is an identifier
   Identifier();
   // Match the = for the correct assignment
-  if(curr_token == "="){
   match(curr_lexeme, "=", curr_token);
   // Find if there is a valid expression
   Expression();
-  //gen_instr("POPM", get_address(save));
+  gen_instr("POPM", get_address(save));
   // Next, match the ";" that ends the assignment
   match(curr_lexeme, ";", curr_token);
-  }
 
 }
 
@@ -667,9 +665,9 @@ void Empty() {
 }
 
 void Identifier() {
-  // Since we already have the lexeme, we just need to make sure the token is
-  // not error, as this would indicate that we have an incorrect lexeme
-  if(curr_token == "identifier") {
+// Not sure what this is supposed to do but I don't think its right, we shouldn't be calling anything inside of Identifier()
+/*
+if(curr_token == "identifier") {
     std::string save = curr_token;
     lexemes;
     // std::cout << "Token: " << curr_token << "          Lexeme: " << curr_lexeme << std::endl;
@@ -681,6 +679,18 @@ void Identifier() {
   else {
     std::cout << " id expected";
     //error_info();
+  }
+  */
+
+  // Since we already have the lexeme, we just need to make sure the token is
+  // not error, as this would indicate that we have an incorrect lexeme
+  if(curr_token == "identifier") {
+    // std::cout << "Token: " << curr_token << "          Lexeme: " << curr_lexeme << std::endl;
+    match(curr_lexeme, curr_lexeme, curr_token);
+    // Update curr_token and curr_lexeme
+  }
+  else {
+    error_info();
   }
 }
 
@@ -714,6 +724,7 @@ void Real() {
 // the info about the lexeme, including its token type
 void match(std::string& curr_lexeme, std::string corrrect_lexeme,
            std::string& token) {
+
   // If the lexeme is correct, display its information and token type
   if(curr_lexeme == corrrect_lexeme) {
     output_file << setw(10) << left << "Token: " << curr_token << setw(20)
@@ -732,16 +743,12 @@ void update(std::string& lexeme, std::string& token) {
   if(token == "identifier") {
     addto_symboltable(lexeme);
   }
-  else if(lexeme != "identifier"){
-    std::cout << "This identifier hasn't been decalred";
-  }
-  else{
   // Erase the first row of entries from the lexemes vector
   lexemes.erase(lexemes.begin());
   // Since the next lexeme and token are now at the beginning of the list, we
   // simply reassign curr_token and curr_lexeme to the beginning of the vector
   lexeme = lexemes[0][0];
-  token = lexemes[0][1];}
+  token = lexemes[0][1];
 }
 
 void error_info() {
@@ -761,32 +768,38 @@ void error_info() {
 
 void addto_symboltable(std::string& lexeme) {
   // First, check to see if the lexeme is already in the symbol table
-    for(int i = 0; i < symbol_table.size(); i++){
-      if(symbol_table[i][0] == curr_lexeme){              //if lexeme is already in symbol_table error message
-      std::cout << " This lexeme is already declared.";}
-      else{
-      std::vector<string> temp;
-      temp.push_back(curr_lexeme);
-      temp.push_back(std::to_string(mem_addr));
-      symbol_table.push_back(temp);
-      mem_addr++;
+  bool was_found = false;
+  for(int i = 0; i < symbol_table.size(); i++) {
+    if(symbol_table[i][0] == lexeme) {
+      was_found = true;
+      // If the lexeme is already in the symbol table, do not add it
     }
-    }
+  }
+  // If the value doesn't exist in the symbol table yet, add it
+  if(!was_found) {
+    std::vector<string> temp;
+    temp.push_back(lexeme);
+    temp.push_back(std::to_string(mem_addr));
+    symbol_table.push_back(temp);
+    mem_addr++;
+  }
 }
 
 void print_symbol_table() {
   std::cout << "\n\nHere is the symbol table:\n";
-  for(int i = 0; i < symbol_table.size()-1; i++) {
-    std::cout << "Lexeme: " << symbol_table[i][0] << "     Memory Address: "
-              << symbol_table[i][1] << std::endl;
+  for(int i = 0; i < symbol_table.size(); i++) {
+    std::cout << "Lexeme: " << symbol_table[i][0];
+    std::cout << "    Memory Address: " << symbol_table[i][1] << std::endl;
   }
 }
 
 //Printing instruction table array
 void print_instruct_table() {
   std::cout << "\n\nHere is the symbol table:\n";
-  for(int i = 0; i <= 1000; i++) {
-    std::cout << "Address: " << Instruct_Table[i][0] << "     Op: "
-              << Instruct_Table[i][1] << "     Oprnd: "<< Instruct_Table[0][1][i] << std::endl;
+  std::cout << instruct_table[0][0] << "    " << instruct_table[0][1]
+            << "      " << instruct_table[0][2] << std::endl;
+  for(int i = 1; i <= 1000; i++) {
+    std::cout << "Addr: " << instruct_table[i][0] << "     Op: "
+              << instruct_table[i][1] << "     Oprnd: "<< instruct_table[0][1][i] << std::endl;
   }
 }
