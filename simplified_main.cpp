@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iomanip>
 #include <queue>
-// #include "Lexer.cpp"
+#include "Lexer.cpp"
 
 using namespace std;
 
